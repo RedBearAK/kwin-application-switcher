@@ -14,7 +14,7 @@ remove_w_kpackagetool6() {
         exit_w_error "The 'kpackagetool6' command is missing. Cannot remove KWin script."
     else
         echo "Removing '${script_name}' KWin script."
-        kpackagetool6 --type=${script_type} --remove ${script_path}
+        kpackagetool6 --type=${script_type} --remove "${script_name}"
     fi
 }
 
@@ -23,13 +23,13 @@ remove_w_kpackagetool5() {
         exit_w_error "The 'kpackagetool5' command is missing. Cannot remove KWin script."
     else
         echo "Removing '${script_name}' KWin script."
-        kpackagetool5 --type=${script_type} --remove ${script_path}
+        kpackagetool5 --type=${script_type} --remove "${script_name}"
     fi
 }
 
 KDE_ver=${KDE_SESSION_VERSION:-0}   # Default to zero value if environment variable not set
 script_type="KWin/Script"
-script_path="."
+script_name=""
 
 
 if [ -f "./metadata.json" ]; then
