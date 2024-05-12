@@ -48,12 +48,12 @@ elif [[ $KDE_ver -eq 6 ]]; then
     if ! remove_w_kpackagetool6; then
         exit_w_error "Problem while removing '${script_name}' KWin script."
     fi
-    echo "'${script_name}' KWin script removed. Refreshing KWin."
+    echo "KWin script '${script_name}' was removed."
 elif [[ ${KDE_ver} -eq 5 ]]; then
     if ! remove_w_kpackagetool5; then
         exit_w_error "Problem while removing '${script_name}' KWin script."
     fi
-    echo "'${script_name}' KWin script removed. Refreshing KWin."
+    echo "KWin script '${script_name}' was removed."
 else
     exit_w_error "KDE_SESSION_VERSION had a value, but that value was unrecognized: '${KDE_ver}'"
 fi
