@@ -14,18 +14,22 @@ unload_kwin_script() {
 
     local output=""
     local success=0
+    local not_loaded=0
 
     if command -v qdbus &> /dev/null; then
         output=$(qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "${script_name}")
         [[ "$output" == "true" ]] && success=1
+        [[ "$output" == "false" ]] && not_loaded=1
     elif command -v gdbus &> /dev/null; then
         output=$(gdbus call --session --dest org.kde.KWin --object-path /Scripting \
                             --method org.kde.kwin.Scripting.unloadScript "${script_name}")
         [[ "$output" == "(true,)" ]] && success=1
+        [[ "$output" == "(false,)" ]] && not_loaded=1
     elif command -v dbus-send &> /dev/null; then
         output=$(dbus-send --session --print-reply --type=method_call --dest=org.kde.KWin \
                             /Scripting org.kde.kwin.Scripting.unloadScript string:"${script_name}")
         echo "$output" | grep -q "boolean true" && success=1
+        echo "$output" | grep -q "boolean false" && not_loaded=1
     else
         echo "No available D-Bus utility to unload the KWin script."
         echo "You may need to log out to remove the KWin script from memory."
@@ -34,8 +38,13 @@ unload_kwin_script() {
 
     if [[ $success -eq 1 ]]; then
         echo "Successfully unloaded the KWin script."
+    elif [[ $not_loaded -eq 1 ]]; then
+        echo "The KWin script was already unloaded or does not exist."
     else
-        echo "ERROR: Failed to unload the KWin script. Look for an error displayed above."
+        echo "ERROR: Failed to unload the KWin script. Here is the output:"
+        echo ""
+        echo "$output"
+        echo ""
         echo "Uninstalling the script now may leave it active in memory until you log out."
         read -r -p "Continue with uninstalling the script files anyway? [y/N]: " response
         case $response in
