@@ -90,6 +90,9 @@ else
     exit_w_error "No suitable metadata file found. Unable to get script name."
 fi
 
+if [ "$script_name" == "" ]; then
+    exit_w_error "Failed to parse KWin script name from metadata file."
+fi
 
 if [[ $KDE_ver -eq 0 ]]; then
     echo "KDE_SESSION_VERSION environment variable was not set."
