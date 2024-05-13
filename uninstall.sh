@@ -9,29 +9,30 @@ exit_w_error() {
     exit 1
 }
 
-unload_script() {
+unload_kwin_script() {
     echo "Attempting to unload KWin script '${script_name}' prior to removal."
 
+    local output=""
     local success=0
 
     if command -v qdbus &> /dev/null; then
-        qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "${script_name}"
-        success=$?
+        output=$(qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "${script_name}")
+        [[ "$output" == "true" ]] && success=1
     elif command -v gdbus &> /dev/null; then
-        gdbus call --session --dest org.kde.KWin --object-path /Scripting \
-                    --method org.kde.kwin.Scripting.unloadScript "${script_name}"
-        success=$?
+        output=$(gdbus call --session --dest org.kde.KWin --object-path /Scripting \
+                            --method org.kde.kwin.Scripting.unloadScript "${script_name}")
+        [[ "$output" == "(true,)" ]] && success=1
     elif command -v dbus-send &> /dev/null; then
-        dbus-send --session --type=method_call --dest=org.kde.KWin /Scripting \
-                    org.kde.kwin.Scripting.unloadScript string:"${script_name}"
-        success=$?
+        output=$(dbus-send --session --print-reply --type=method_call --dest=org.kde.KWin \
+                            /Scripting org.kde.kwin.Scripting.unloadScript string:"${script_name}")
+        echo "$output" | grep -q "boolean true" && success=1
     else
         echo "No available D-Bus utility to unload the KWin script."
         echo "You may need to log out to remove the KWin script from memory."
-        success=1  # Indicates failure to unload due to lack of tools
+        success=0  # Indicates failure to unload due to lack of tools
     fi
 
-    if [[ $success -eq 0 ]]; then
+    if [[ $success -eq 1 ]]; then
         echo "Successfully unloaded the KWin script."
     else
         echo "ERROR: Failed to unload the KWin script. Look for an error displayed above."
@@ -85,13 +86,13 @@ if [[ $KDE_ver -eq 0 ]]; then
     echo "KDE_SESSION_VERSION environment variable was not set."
     exit_w_error "Cannot remove '${script_name}' KWin script."
 elif [[ $KDE_ver -eq 6 ]]; then
-    unload_script
+    unload_kwin_script
     if ! remove_w_kpackagetool6; then
         exit_w_error "Problem while removing '${script_name}' KWin script."
     fi
     echo "KWin script '${script_name}' was removed."
 elif [[ ${KDE_ver} -eq 5 ]]; then
-    unload_script
+    unload_kwin_script
     if ! remove_w_kpackagetool5; then
         exit_w_error "Problem while removing '${script_name}' KWin script."
     fi
