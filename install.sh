@@ -63,7 +63,8 @@ elif [[ ${KDE_ver} -eq 5 ]]; then
     fi
     kwriteconfig5 --file kwinrc --group Plugins --key "$script_name"Enabled true
 else
-    exit_w_error "KDE_SESSION_VERSION had a value, but that value was unrecognized: '${KDE_ver}'"
+    echo "KDE_SESSION_VERSION had a value, but that value was unrecognized: '${KDE_ver}'"
+    exit_w_error "This script is meant to run only on KDE 5 or 6."
 fi
 
 
