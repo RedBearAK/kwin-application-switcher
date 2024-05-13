@@ -15,22 +15,21 @@ unload_script() {
     local success=0
 
     if command -v qdbus &> /dev/null; then
-        qdbus org.kde.KWin /KWin unloadScript "${script_name}"
+        qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "${script_name}"
         success=$?
     elif command -v gdbus &> /dev/null; then
-        gdbus call --session --dest org.kde.KWin --object-path /KWin \
-                    --method org.kde.KWin.unloadScript "${script_name}"
+        gdbus call --session --dest org.kde.KWin --object-path /Scripting \
+                    --method org.kde.kwin.Scripting.unloadScript "${script_name}"
         success=$?
     elif command -v dbus-send &> /dev/null; then
-        dbus-send --session --type=method_call --dest=org.kde.KWin /KWin \
-                    org.kde.KWin.unloadScript string:"${script_name}"
+        dbus-send --session --type=method_call --dest=org.kde.KWin /Scripting \
+                    org.kde.kwin.Scripting.unloadScript string:"${script_name}"
         success=$?
     else
         echo "No available D-Bus utility to unload the KWin script."
         echo "You may need to log out to remove the KWin script from memory."
         success=1  # Indicates failure to unload due to lack of tools
     fi
-
 
     if [[ $success -eq 0 ]]; then
         echo "Successfully unloaded the KWin script."
