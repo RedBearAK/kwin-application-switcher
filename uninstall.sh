@@ -16,15 +16,15 @@ unload_kwin_script() {
     local success=0
     local not_loaded=0
 
-    if command -v qdbus &> /dev/null; then
-        output=$(qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "${script_name}")
-        [[ "$output" == "true" ]] && success=1
-        [[ "$output" == "false" ]] && not_loaded=1
-    elif command -v gdbus &> /dev/null; then
+    if command -v gdbus &> /dev/null; then
         output=$(gdbus call --session --dest org.kde.KWin --object-path /Scripting \
                             --method org.kde.kwin.Scripting.unloadScript "${script_name}")
         [[ "$output" == "(true,)" ]] && success=1
         [[ "$output" == "(false,)" ]] && not_loaded=1
+    elif command -v qdbus &> /dev/null; then
+        output=$(qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript "${script_name}")
+        [[ "$output" == "true" ]] && success=1
+        [[ "$output" == "false" ]] && not_loaded=1
     elif command -v dbus-send &> /dev/null; then
         output=$(dbus-send --session --print-reply --type=method_call --dest=org.kde.KWin \
                             /Scripting org.kde.kwin.Scripting.unloadScript string:"${script_name}")
@@ -86,6 +86,7 @@ if [ -f "./metadata.json" ]; then
     script_name=$(grep -oP '"Id":\s*"[^"]*' ./metadata.json | grep -oP '[^"]*$')
 elif [ -f "./metadata.desktop" ]; then
     script_name=$(grep '^X-KDE-PluginInfo-Name=' ./metadata.desktop | cut -d '=' -f2)
+    echo "FYI: 'metadata.desktop' files are deprecated. Use 'metadata.json' format."
 else
     exit_w_error "No suitable metadata file found. Unable to get script name."
 fi
@@ -119,37 +120,50 @@ sleep 0.5
 
 # We need to gracefully cascade through common D-Bus utils to 
 # find one that is available to use for the KWin reconfigure 
-# command. Sometimes 'qdbus' is not available.
+# command. Sometimes 'qdbus' is not available. Start with 'gdbus'.
 
-# Array of command names of common D-Bus utilities
-dbus_commands=("qdbus" "gdbus" "dbus-send")
+# Extended array of D-Bus command names with prioritized qdbus variants
+dbus_commands=("gdbus" "qdbus6" "qdbus-qt6" "qdbus-qt5" "qdbus" "dbus-send")
 
-reconfigure_w_qdbus() {
-    qdbus org.kde.KWin /KWin reconfigure
+# Functions to handle reconfiguration with different dbus utilities
+reconfigure() {
+    case "$1" in
+        gdbus)
+            gdbus call --session --dest org.kde.KWin --object-path /KWin --method org.kde.KWin.reconfigure
+            ;;
+        qdbus6 | qdbus-qt6 | qdbus-qt5 | qdbus)
+            "$1" org.kde.KWin /KWin reconfigure
+            ;;
+        dbus-send)
+            dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure
+            ;;
+        *)
+            echo "Unsupported DBus utility: $1" >&2
+            return 1
+            ;;
+    esac
 }
 
-reconfigure_w_gdbus() {
-    gdbus call --session --dest org.kde.KWin --object-path /KWin --method org.kde.KWin.reconfigure
-}
-
-reconfigure_w_dbus_send() {
-    dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure
-}
+# Unquoted 'true' and 'false' values are built-in commands in bash, 
+# returning 0 or 1 exit status.
+# So they can sort of be treated like Python's 'True' or 'False' in 'if' conditions.
+dbus_cmd_found=false
 
 # Iterate through the dbus_commands array
 for cmd in "${dbus_commands[@]}"; do
     if command -v "${cmd}" &> /dev/null; then
-        # Call the corresponding function based on the command
-        echo "Refreshing KWin configuration."
-        case "$cmd" in
-            qdbus)              reconfigure_w_qdbus &> /dev/null;;
-            gdbus)              reconfigure_w_gdbus &> /dev/null ;;
-            dbus-send)          reconfigure_w_dbus_send &> /dev/null ;;
-        esac
+        dbus_cmd_found=true
+        echo "Refreshing KWin configuration using $cmd."
+        reconfigure "${cmd}" &> /dev/null
         sleep 0.5
         # Break out of the loop once a command is found and executed
         break
     fi
 done
+
+if ! $dbus_cmd_found; then
+    echo "No suitable DBus utility found. KWin configuration may need manual reloading."
+fi
+
 
 echo "Finished removing KWin script: '${script_name}'"
