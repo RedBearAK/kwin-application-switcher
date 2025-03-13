@@ -83,7 +83,9 @@ script_name=""
 
 
 if [ -f "./metadata.json" ]; then
-    script_name=$(grep -oP '"Id":\s*"[^"]*' ./metadata.json | grep -oP '[^"]*$')
+    # The "P" option for grep causes a problem on Chimera Linux, which uses BSD utils
+    # script_name=$(grep -oP '"Id":\s*"[^"]*' ./metadata.json | grep -oP '[^"]*$')
+    script_name=$(grep '"Id":' ./metadata.json | sed 's/.*"Id":[[:space:]]*"\([^"]*\).*/\1/')
 elif [ -f "./metadata.desktop" ]; then
     script_name=$(grep '^X-KDE-PluginInfo-Name=' ./metadata.desktop | cut -d '=' -f2)
     echo "FYI: 'metadata.desktop' files are deprecated. Use 'metadata.json' format."
