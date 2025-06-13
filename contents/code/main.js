@@ -8,7 +8,9 @@ GNU General Public License v3.0
 // initialization
 ///////////////////////
 
-const debugMode = readConfig("debugMode", true);
+// const debugMode = readConfig("debugMode", true);
+const debugMode = readConfig("debugMode", false);
+
 function debug(...args) {
     if (debugMode) { console.debug("applicationswitcher:", ...args); }
 }
